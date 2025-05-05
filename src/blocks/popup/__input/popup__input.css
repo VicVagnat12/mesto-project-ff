@@ -20,3 +20,21 @@
     line-height: 15px;
   }
 }
+
+.form__input-error {
+  display: none;
+  color: red;
+  font-family: Inter;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 100%;
+  letter-spacing: 0%;
+}
+
+.form__input_type_error {
+  border-bottom-color: red;
+}
+
+.form__input-error_active {
+  display: block;
+}
