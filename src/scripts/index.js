@@ -11,8 +11,10 @@ import {
   editProfile,
   addNewCard,
   addNewAvatar,
+  userPromise,
+  cardsPromise,
 } from "../components/api";
-export { openImage, placesList, fillUserProfile, fillCards};
+export { openImage, fillUserProfile, fillCards };
 
 const inputUrl = document.querySelector("#profile-url-input");
 const formEditProfile = document.forms["edit-profile"];
@@ -28,28 +30,33 @@ const formNewPlace = document.forms["new-place"];
 const addCardButton = document.querySelector(".profile__add-button");
 const cardNameInput = document.querySelector(".popup__input_type_card-name");
 const urlInput = document.querySelector(".popup__input_type_url");
+let userId = "";
+
+const promises = [userPromise(), cardsPromise()];
+
+Promise.all(promises)
+  .then((results) => {
+    fillUserProfile(results[0]);
+    userId = results[0]._id;
+    fillCards(results[1]);
+  })
+  .catch((error) => {
+    console.error("Ошибка:", error);
+  });
 
 const submitButtonText = {
   saving: "Сохранение...",
   save: "Сохранить",
 };
 
-function savingButtonText(buttonElement) {
-  buttonElement.textContent = submitButtonText.saving;
-};
-
-function saveButtonText(buttonElement) {
-  buttonElement.textContent = submitButtonText.save;
-};
-
+function savingButtonText(buttonElement, text) {
+  buttonElement.textContent = submitButtonText[text];
+}
 
 function fillUserProfile(profileData) {
   const profileImage = document.querySelector(".profile__image");
   const profileTitle = document.querySelector(".profile__title");
   const profileDescription = document.querySelector(".profile__description");
-  const profileElement = document.querySelector(".profile");
-
-  profileElement.dataset.userId = profileData._id;
 
   profileImage.style.backgroundImage = `url(${profileData.avatar})`;
   profileTitle.textContent = profileData.name;
@@ -58,8 +65,14 @@ function fillUserProfile(profileData) {
 
 function fillCards(arrCards) {
   arrCards.forEach(function (card) {
-      const cardElement = createCard(card, deleteCard, likeCard, openImage);
-      placesList.append(cardElement);
+    const cardElement = createCard(
+      card,
+      deleteCard,
+      likeCard,
+      openImage,
+      userId
+    );
+    placesList.append(cardElement);
   });
 }
 
@@ -73,19 +86,23 @@ function openImage(evt) {
   popupCaption.textContent = image.alt;
 
   openPopup(document.querySelector(".popup_type_image"));
-};
+}
 
-function openAvatar(evt) {
-  evt.preventDefault();
-  inputUrl.value = profileImage.style.backgroundImage.slice(5, -2);
+function openAvatar() {
+  const bgImage = profileImage.style.backgroundImage;
+  const urlMatch = bgImage.match(/url\(["']?(.*?)["']?\)/);
 
-  openPopup(document.querySelector(".popup_type_avatar"));
+  if (urlMatch && urlMatch[1]) {
+    inputUrl.value = urlMatch[1];
+  }
+
   clearValidation(formNewAvatar, validationConfig);
-};
+  openPopup(document.querySelector(".popup_type_avatar"));
+}
 
 function avatarFormSubmit(evt) {
   evt.preventDefault();
-  savingButtonText(evt.target.querySelector(".popup__button"));
+  savingButtonText(evt.target.querySelector(".popup__button"), "saving");
 
   const newAvatarUrl = inputUrl.value;
   const popupElement = evt.target.closest(".popup");
@@ -94,13 +111,14 @@ function avatarFormSubmit(evt) {
     .then((updatedData) => {
       fillUserProfile(updatedData);
       closePopup(popupElement);
-      saveButtonText(evt.target.querySelector(".popup__button"));
     })
     .catch((error) => {
       console.error("Ошибка:", error);
-      saveButtonText(evt.target.querySelector(".popup__button"));
+    })
+    .finally(() => {
+      savingButtonText(evt.target.querySelector(".popup__button"), "save");
     });
-};
+}
 
 profileImage.addEventListener("click", openAvatar);
 formNewAvatar.addEventListener("submit", avatarFormSubmit);
@@ -108,12 +126,12 @@ formNewAvatar.addEventListener("submit", avatarFormSubmit);
 function fillEditPopup() {
   nameInput.value = nameProfile.textContent;
   jobInput.value = jobProfile.textContent;
-};
+}
 
 function profileFormSubmit(evt) {
   evt.preventDefault();
 
-  savingButtonText(evt.target.querySelector(".popup__button"));
+  savingButtonText(evt.target.querySelector(".popup__button"), "saving");
   const name = nameInput.value;
   const job = jobInput.value;
   const popupElement = evt.target.closest(".popup");
@@ -125,13 +143,14 @@ function profileFormSubmit(evt) {
     .then((updatedData) => {
       fillUserProfile(updatedData);
       closePopup(popupElement);
-      saveButtonText(evt.target.querySelector(".popup__button"));
     })
     .catch((error) => {
       console.error("Ошибка:", error);
-      saveButtonText(evt.target.querySelector(".popup__button"));
+    })
+    .finally(() => {
+      savingButtonText(evt.target.querySelector(".popup__button"), "save");
     });
-};
+}
 
 formEditProfile.addEventListener("submit", profileFormSubmit);
 
@@ -144,13 +163,16 @@ editButton.addEventListener("click", function () {
 
 addCardButton.addEventListener("click", function () {
   const newCardPopup = document.querySelector(".popup_type_new-card");
+  formNewPlace.reset();
+  clearValidation(formNewPlace, validationConfig);
+
   openPopup(newCardPopup);
 });
 
 function cardFormSubmit(evt) {
   evt.preventDefault();
 
-  savingButtonText(evt.target.querySelector(".popup__button"));
+  savingButtonText(evt.target.querySelector(".popup__button"), "saving");
   const popupElement = evt.target.closest(".popup");
   const newCardName = cardNameInput.value;
   const newCardSrc = urlInput.value;
@@ -159,23 +181,25 @@ function cardFormSubmit(evt) {
     link: newCardSrc,
   };
 
-  clearValidation(formNewPlace, validationConfig);
-
   addNewCard(card)
     .then((updatedData) => {
-      createCard(updatedData, deleteCard, likeCard, openImage);
+      const newCard = createCard(
+        updatedData,
+        deleteCard,
+        likeCard,
+        openImage,
+        userId
+      );
+      placesList.prepend(newCard);
       closePopup(popupElement);
-
-      cardNameInput.value = "";
-      urlInput.value = "";
-
-      saveButtonText(evt.target.querySelector(".popup__button"));
     })
     .catch((error) => {
       console.error("Ошибка:", error);
-      saveButtonText(evt.target.querySelector(".popup__button"));
+    })
+    .finally(() => {
+      savingButtonText(evt.target.querySelector(".popup__button"), "save");
     });
-};
+}
 
 formNewPlace.addEventListener("submit", cardFormSubmit);
 

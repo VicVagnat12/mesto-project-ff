@@ -1,6 +1,5 @@
 export { createCard, deleteCard, likeCard };
 import { likeRequest, deleteCardRequest } from "./api";
-import { placesList } from "../scripts/index";
 
 const cardTemplate = document.querySelector("#card-template").content;
 
@@ -8,10 +7,10 @@ const createCard = function (
   card,
   deleteCallback,
   likeCallback,
-  imageCallback
+  imageCallback,
+  userId
 ) {
   const cardElement = cardTemplate.querySelector(".card").cloneNode(true);
-  const profileElement = document.querySelector(".profile");
 
   cardElement.querySelector(".card__image").src = card.link;
   cardElement.querySelector(".card__image").alt = card.name;
@@ -23,14 +22,11 @@ const createCard = function (
   likeButton.addEventListener("click", likeCallback);
   cardElement.dataset.cardId = card._id;
 
-  if (
-    card.likes &&
-    card.likes.some((user) => user._id === profileElement.dataset.userId)
-  ) {
+  if (card.likes && card.likes.some((user) => user._id === userId)) {
     likeButton.classList.toggle("card__like-button_is-active");
   }
 
-  if (card.owner._id === profileElement.dataset.userId) {
+  if (card.owner._id === userId) {
     deleteButton.addEventListener("click", deleteCallback);
   } else {
     deleteButton.remove();
@@ -42,7 +38,6 @@ const createCard = function (
   const cardImage = cardElement.querySelector(".card__image");
   cardImage.addEventListener("click", imageCallback);
 
-  placesList.prepend(cardElement);
   return cardElement;
 };
 
@@ -67,9 +62,9 @@ function likeCard(evt) {
   likeRequest(evt.target.closest(".card").dataset.cardId, method)
     .then((cardData) => {
       evt.target.nextElementSibling.textContent = cardData.likes.length;
+      evt.target.classList.toggle("card__like-button_is-active");
     })
     .catch((error) => {
       console.error("Ошибка:", error);
     });
-  evt.target.classList.toggle("card__like-button_is-active");
 }

@@ -18,7 +18,7 @@
 }
 
 .profile__image::after {
-  background-image: url(../../../../images/edit-icon.svg);
+  background-image: url(../../../images/edit-icon.svg);
   background-repeat: no-repeat;
   background-size: contain;
   content: "";
